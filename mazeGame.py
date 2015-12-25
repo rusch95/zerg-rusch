@@ -21,7 +21,7 @@ class PriorityQueue:
     
 class World:
     '''
-    Serves as the maze enviroment. Other Stuff
+    Serves as the maze enviroment. Other Stuff as well.
     '''
     
     #Default Symbol Variables
@@ -59,13 +59,18 @@ class World:
     
     def generate(self, default=True):
         '''Generates map in form of 2D array'''
-    
+        
+        text_file = open('testWorld.txt')
+        level = []
+        for line in text_file:
+            level.append([int(char) for char in line if char != '\n'])
+        '''
         level = [[9,0,0,0,0,0,0,0,8,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                 [1,1,1,1,1,1,1,1,1,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                 [0,0,0,0,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                 [0,0,0,0,0,0,0,0,0,1,1,8,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                 [0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,1,1,1,1,8,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                 [0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                 [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                 [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -84,7 +89,7 @@ class World:
                 [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                 [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                 [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]
-                
+        '''              
                 
         self.len_y = len(level)
         self.len_x = len(level[0])
@@ -398,9 +403,9 @@ def main(delay=.1):
         debug = False
         world = World(debug)
         Agent.test = False
-        bob = Agent(world, name='Bob', position=(12,12))
-        chuck = Agent(world, name='Chuck', position=(12,0))
-        dave = Agent(world,name='Dave', position=(12,1))
+        bob = Agent(world, name='Bob', position=(7,7))
+        chuck = Agent(world, name='Chuck', position=(7,0))
+        dave = Agent(world,name='Dave', position=(7,1))
 
         world.replace_symbols(0, '.')
     
@@ -444,8 +449,6 @@ def main(delay=.1):
             curses.echo()
             curses.endwin()
         raise
-
-            
         
 if __name__ == '__main__':
     main(delay=0.1)
