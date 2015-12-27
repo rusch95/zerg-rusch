@@ -4,6 +4,7 @@ import heapq
 import time
 import curses
 from collections import deque
+from collections import defaultdict
 
 class PriorityQueue:
     
@@ -25,18 +26,19 @@ class World:
     '''
     
     #Default Symbol Variables
-    gate = 8
-    wall = 1
+    gate = '8'
+    wall = '1'
     unex_wall = '|'  
     blank = '.'
-    goal = 9
+    goal = '9'
     agent = '@'
     no_pass = [gate, wall, unex_wall]
     
     agent_positions = {}
+    agent_goals = {}
     
         
-    def __init__(self,debug=True):
+    def __init__(self, debug=True):
         self.level = self.generate()
         self.hidden = self.hide()
         self.goalpos = self.init_goal()
@@ -45,52 +47,55 @@ class World:
 
         
     def replace_symbols(self, original, new):
-        '''
-        Iterates through the level 
-        replacing old symbol with new
-        '''
-        
+        '''Iterates through the level 
+        replacing old symbol with new''' 
         for y in range(self.len_y):
             for x in range(self.len_x):
                 if self.level[y][x] == original:
                     self.level[y][x] = new
                     self.hidden[y][x] = new
-        
     
+    def dist(self, a, b):
+        y1, x1 = a
+        y2, x2 = b
+        return ((y1 - y2) ** 2 + (x1 - x2) ** 2) ** .5
+    
+    def mod_dist(self, x2, y2, ignore_agent):        
+        total_dist = 0
+        no_div_zero = 1
+        g_falloff = 1
+        g_weight = 100
+        p_falloff = 1
+        p_weight = 10
+        cur = (y2, x2)
+        for agent in self.agent_goals:
+            if agent != ignore_agent:
+                goal = self.agent_goals[agent]
+                dist = self.dist(goal, cur)
+                total_dist += g_weight / (dist + no_div_zero) ** g_falloff
+        for agent in self.agent_positions:
+            if agent != ignore_agent:
+                pos = self.agent_positions[agent]
+                dist = self.dist(pos, cur)
+                total_dist += p_weight / (dist + no_div_zero) ** p_falloff
+                
+            
+            
+        return total_dist
+
+      
+    def agent_conc(self, falloff=-1):
+        
+        return [[self.mod_dist(i, j) for i in range(self.len_x)] for j in range(self.len_y)]
+        
+          
     def generate(self, default=True):
         '''Generates map in form of 2D array'''
         
         text_file = open('testWorld.txt')
         level = []
         for line in text_file:
-            level.append([int(char) for char in line if char != '\n'])
-        '''
-        level = [[9,0,0,0,0,0,0,0,8,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [1,1,1,1,1,1,1,1,1,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,1,1,8,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,0,1,1,1,1,8,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]
-        '''              
-                
+            level.append([char for char in line if char != '\n'])       
         self.len_y = len(level)
         self.len_x = len(level[0])
     
@@ -169,10 +174,6 @@ class World:
         self.time += 1
     
     
-    def time(self):
-        return self.time
-    
-    
     def is_in_level(self, position):
         (y, x) = position
         return not (y < 0 or x < 0 or y >= self.len_y or x >= self.len_x)
@@ -182,11 +183,13 @@ class World:
     
 class Agent:
     '''
-    AI Agent
+    AI Agent Base Class
     '''
     
     radio_queue = None
     busy = False
+    neighbors = 0
+    destroy_mode = False
     
     def __init__(self, world, name=None, position=(0,0)):
         #Upright corner origin. (y, x)
@@ -199,6 +202,7 @@ class Agent:
         self.world = world
         world.agent_positions[name] = position
         self.walk_queue = []
+    
     
     def move(self, new_pos):
         new_y = new_pos[0]
@@ -218,13 +222,14 @@ class Agent:
         if abs(new_y - old_y) <= 1 and abs(new_x - old_x) <= 1:
             self.position = (new_y, new_x)
             self.world.agent_positions[self.name] = self.position  
+            
         else:
             # poss change to error
             return
     
     
     def goto(self, goal):
-        self.walk_queue = self.pathfind(goal)
+        self.walk_queue = self.pathfind(self.world.hidden, goal)
     
     
     def walk(self):
@@ -249,8 +254,13 @@ class Agent:
                     seen.append(self.world.gate)
                 elif self.world.level[y][x] == self.world.wall:
                     self.world.hidden[y][x] = self.world.wall
-                elif self.world.level[y][x] == 5:
+                    
+                if self.world.level[y][x] == 5:
                     seen.append(5)
+                    
+                if self.world.level[y][x] == 8:
+                    seen.append(8)
+                
         return seen
         
         
@@ -267,18 +277,17 @@ class Agent:
             agent.radio_queue = message
     
     
-    def asssist(self):
-        pass
-    
-    
     def distance(self, a, b):
         (y1, x1) = a
         (y2, x2) = b
         return ((x1 -x2)**2 + (y1 - y2)**2)**.5
     
     
-    def pathfind(self, goal):
-        '''Uses a*'''
+    def pathfind(self, level, goal, isLoc=True, shy=True):
+        '''
+        Currently explores based on valid moveable area.
+        Could be changed to have no level information.
+        '''
         frontier = PriorityQueue()
         frontier.put(self.position, 0)
         came_from = {}
@@ -286,19 +295,39 @@ class Agent:
         came_from[self.position] = None
         cost_so_far[self.position] = 0
         hit_goal = False
+        self.world.screen.addstr(28,0, 'Nope')
         
         while not frontier.empty():
             current = frontier.get()
-        
-            if current == goal:
-                hit_goal = True
-                break
+            
+            if isLoc:
+                if current == goal:
+                    hit_goal = True
+                    break
+            else:
+                for suc in self.valid_neighbors(current):
+                    (y, x) = suc
+                    if level[y][x] == str(goal):                   
+                        hit_goal = True
+                        goal = current
+                        self.world.agent_goals[self.name] = goal
+                        break
         
             for suc in self.succesor(current):
                 new_cost = cost_so_far[current] + self.distance(current, suc)
                 if suc not in cost_so_far or new_cost < cost_so_far[suc]:
                     cost_so_far[suc] = new_cost
-                    priority = new_cost + self.distance(goal, suc)
+                               
+                    if True:
+                        dist = self.distance(self.world.goalpos, suc)
+                    else:
+                        dist = 0
+                    if shy:
+                        shyness = self.world.mod_dist(suc[0],suc[1],self.name)
+                    else:
+                        shyness = 0
+                        
+                    priority = new_cost + dist + shyness
                     frontier.put(suc, priority)
                     came_from[suc] = current
     
@@ -313,90 +342,50 @@ class Agent:
         return path
 
     
-    def valid_neighbors(self, position):
+    def valid_neighbors(self, position, inc_self=False):
         ret_list = []
         for i in range(-1, 2):
             for j in range(-1, 2):
-                if i == 0 and j == 0:
+                if i == 0 and j == 0 and not inc_self:
                     continue
                 y = position[0] + i
                 x = position[1] + j
                 if self.world.is_in_level((y, x)):
                     ret_list.append((y,x))
         return ret_list
-                
-    
-    def bfs_feature_find(self, level, feature):
-        start = self.position
-        parent = {}
-        parent[start] = None
-        queue = deque()
-        queue.append(start)
-        found_it = False
+                  
         
-        while queue:
-            current = queue.popleft()
-            for n in self.succesor(current):           
-                if n not in parent:
-                    parent[n] = current
-                    for neigh in self.valid_neighbors(n):
-                        (y, x) = neigh
-                        if level[y][x] == feature:
-                            found_it = True
-                            queue.append(n)
-                            break
-                    if found_it:
-                        break
-                    queue.append(n)
-            if found_it:
-                break
-        if not found_it:
-            return None
-            
-        current = n
-        path = [current]
-        while current != start:
-            current = parent[current]
-            path.append(current)
-        path.reverse()
-        return path 
-        
-        
-    
     def succesor(self, position):
-        rtn = []
-        cur_y = position[0]
-        cur_x = position[1]
-        for i in range(-1, 2):
-            for j in range(-1, 2):
-                new_y = cur_y + i
-                new_x = cur_x + j
-                
-                if i == 0 and j == 0:
-                    continue
-                if 0 > new_y or 0 > new_x:
-                    continue
-                if self.world.len_y < new_y or self.world.len_x < new_x:
-                    continue
-                try:
-                    if self.world.level[new_y][new_x] in self.world.no_pass:
-                        continue
-                except:
-                    continue
-                else:
-                    rtn.append((new_y, new_x))
-        return rtn
-                        
-    def destroy(self):
+        return [x for x in self.valid_neighbors(position) if not self.world.level[x[0]][x[1]] in self.world.no_pass]
+         
+        
+    def destroy(self, needed=3):
+        destroyed = False
         for (y,x) in self.valid_neighbors(self.position):
-            if self.world.level[y][x] == self.world.gate:
-                self.world.level[y][x] = self.world.blank
-                self.world.hidden[y][x] = self.world.blank
+            if self.neighbors >= needed:
+                if self.world.level[y][x] == self.world.gate:
+                    self.world.level[y][x] = self.world.blank
+                    self.world.hidden[y][x] = self.world.blank
+                    destroyed = True
+        return destroyed
+    
+    
+    def update_neighbors(self):
+        fucking_shit = self.valid_neighbors(self.position, inc_self=True)
+        total = 0
+        for x in self.world.agent_positions.values():
+            if x in fucking_shit:
+                total += 1
+        self.neighbors = total    
+            
     
     def seek_goal(self):
         self.pathfind(self.world.goalpos)
 
-def main(delay=.1):
+        
+        
+        
+def main(delay=0):
     
     try:
         hidden = True
@@ -405,39 +394,58 @@ def main(delay=.1):
         Agent.test = False
         bob = Agent(world, name='Bob', position=(7,7))
         chuck = Agent(world, name='Chuck', position=(7,0))
-        dave = Agent(world,name='Dave', position=(7,1))
+        dave = Agent(world,name='Dave', position=(8,4))
 
         world.replace_symbols(0, '.')
     
         agents = [bob, chuck, dave]
+
         #for agent in agents:
         #    agent.goto(world.goalpos)
-        flag = True
         while True:
             for agent in agents:
-            
-                agent.walk()
                 
-                if agent.radio_queue and not agent.busy:
-                    agent.busy = True
-                    agent.goto(agent.radio_queue)
+                world.inc_time()
+                agent.update_neighbors()
+                agent.walk()            
+                
+                if agent.radio_queue:
+                    
+                    if agent.radio_queue == 'Clear':
+                        agent.busy = False
+                    
+                    elif not agent.busy:
+                        agent.busy = True
+                        agent.goto(agent.radio_queue)
+                        agent.radio_queue = []
             
-                if not agent.walk_queue:
+                if not agent.walk_queue and not agent.busy:
                     for thing in [world.goal, world.unex_wall]:
-                        path = agent.bfs_feature_find(world.hidden, thing)
+                        path = agent.pathfind(world.hidden, thing, shy=True, isLoc=False)
+                        agent.world.screen.addstr(32, 0, '                                                                                                  ')
+                        agent.world.screen.addstr(32, 0, str(world.time))
+                        agent.world.screen.addstr(30, 0, str(thing))
+                        #path = agent.bfs_feature_find(world.hidden, thing)
                         agent.walk_queue = path
                         if path:
                             break
                         
                 seen = agent.look()
-                if 5 in seen and flag:
-                    flag = False
+                
+                if '8' in seen and not agent.destroy_mode:
+                    agent.destroy_mode = True
+                    agent.busy = True
                     agent.call_radio(agents, agent.position)
             
-                agent.destroy()
+                destroyed = agent.destroy()
+                
+                if destroyed:
+                    agent.call_radio(agents, 'Clear')
+                    agent.busy = False
+                    agent.destroy_mode = False
+                     
 
             world.display(hidden=True)
-            world.inc_time()
 
             time.sleep(delay)
             
@@ -449,9 +457,12 @@ def main(delay=.1):
             curses.echo()
             curses.endwin()
         raise
+
         
 if __name__ == '__main__':
     main(delay=0.1)
+
+    
 
 
 
